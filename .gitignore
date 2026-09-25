@@ -1,0 +1,17 @@
+# Dependencies and build output
+node_modules/
+dist/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Environment and OS files
+.env
+.DS_Store
+
+# Runtime save files: ignore everything in data/ except the placeholder
+data/*
+!data/.gitkeep
