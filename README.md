@@ -69,38 +69,38 @@ The backends and the tests use only the Python standard library. Each server
 needs `flask` and `flask-cors` (its `requirements.txt`). Each front end needs
 only `react`, `react-dom` and `vite`.
 
-## First-time setup
+## First-time setup (once per computer)
 
-Run these from the project folder. One virtual environment is enough for both
-servers, because both `requirements.txt` files are the same.
+Open a terminal in the project folder (`PL_FINAL_PROJECT`). One virtual
+environment is enough for both servers, because both `requirements.txt` files
+are the same.
 
-Windows:
+**1. Create the Python virtual environment.** On Windows:
 
 ```bash
 python -m venv .venv
 ```
 
-```bash
-.venv\Scripts\activate
-```
-
-macOS / Linux:
+On macOS / Linux:
 
 ```bash
 python3 -m venv .venv
 ```
 
-```bash
-source .venv/bin/activate
-```
-
-Then install the server packages:
+**2. Install the server packages** (Flask and flask-cors). On Windows:
 
 ```bash
-pip install -r system_oop/requirements.txt
+.venv\Scripts\python -m pip install -r system_oop\requirements.txt
 ```
 
-Each front end needs its packages installed once:
+On macOS / Linux:
+
+```bash
+.venv/bin/python -m pip install -r system_oop/requirements.txt
+```
+
+**3. Install each front end's packages.** Run each of these from the project
+folder:
 
 ```bash
 npm --prefix system_oop/frontend install
@@ -114,54 +114,87 @@ npm --prefix system_imperative/frontend install
 npm --prefix system_compare/frontend install
 ```
 
-## Running System A: OOP System
+## How to run
 
-Use two terminals, both in the project folder with the virtual environment
-active. First start the server (port 5001):
+Every server and every front end is a separate program that keeps running, so
+**each one needs its own terminal**. In VS Code, open another terminal with the
+**+** button in the Terminal panel (or **Ctrl+Shift+`**). Leave the terminals
+open while you use the app, and press **Ctrl+C** in a terminal to stop that
+program.
 
-```bash
-python system_oop/server/app.py
-```
+Always start a system's **server first**, then its **front end**.
 
-Then start the front end (port 5173):
+| What | Open the terminal in | Command (Windows) | Then open |
+|---|---|---|---|
+| OOP server | `PL_FINAL_PROJECT` | `.venv\Scripts\python system_oop\server\app.py` | (port 5001) |
+| OOP front end | `PL_FINAL_PROJECT\system_oop\frontend` | `npm run dev` | http://localhost:5173 |
+| Imperative server | `PL_FINAL_PROJECT` | `.venv\Scripts\python system_imperative\server\app.py` | (port 5002) |
+| Imperative front end | `PL_FINAL_PROJECT\system_imperative\frontend` | `npm run dev` | http://localhost:5174 |
+| Comparison app | `PL_FINAL_PROJECT\system_compare\frontend` | `npm run dev` | http://localhost:5175 |
 
-```bash
-npm --prefix system_oop/frontend run dev
-```
+On macOS / Linux, start the servers with `.venv/bin/python` and forward
+slashes, e.g. `.venv/bin/python system_oop/server/app.py`.
 
-Open **http://localhost:5173**.
+### Run System A: OOP System
 
-## Running System B: Imperative System
-
-First start the server (port 5002):
-
-```bash
-python system_imperative/server/app.py
-```
-
-Then start the front end (port 5174):
+**Terminal 1: server (port 5001).** From the project folder:
 
 ```bash
-npm --prefix system_imperative/frontend run dev
+.venv\Scripts\python system_oop\server\app.py
 ```
 
-Open **http://localhost:5174**.
+It prints `Running on http://127.0.0.1:5001` and keeps running.
 
-Both systems can run at the same time. Each front end only talks to its own
-server, and each server only accepts browser requests from its own front end
-and from the comparison app.
-
-## Running the comparison app
-
-**Start both servers first** (see above):
-`python system_oop/server/app.py` and `python system_imperative/server/app.py`.
-The system front ends do not need to be running. Then start the app:
+**Terminal 2: front end (port 5173).** Go into the front end folder, then start it:
 
 ```bash
-npm --prefix system_compare/frontend run dev
+cd system_oop\frontend
 ```
 
-Open **http://localhost:5175**.
+```bash
+npm run dev
+```
+
+When it shows `➜ Local: http://localhost:5173/`, open **http://localhost:5173**.
+
+### Run System B: Imperative System
+
+**Terminal 1: server (port 5002).** From the project folder:
+
+```bash
+.venv\Scripts\python system_imperative\server\app.py
+```
+
+**Terminal 2: front end (port 5174).** Go into the front end folder, then start it:
+
+```bash
+cd system_imperative\frontend
+```
+
+```bash
+npm run dev
+```
+
+When it shows `➜ Local: http://localhost:5174/`, open **http://localhost:5174**.
+
+Both systems can run at the same time (four terminals). They never share data:
+each system has its own save file in its `data/` folder.
+
+### Run the comparison app
+
+**Start both servers first** (the OOP server and the Imperative server, see
+above). The two system front ends do not need to be running. Then, in a new
+terminal:
+
+```bash
+cd system_compare\frontend
+```
+
+```bash
+npm run dev
+```
+
+When it shows `➜ Local: http://localhost:5175/`, open **http://localhost:5175**.
 
 * **Normal mode:** use the **OOP System / Imperative System** switch to show
   one system full width. The header shows which system is active and its
@@ -175,15 +208,17 @@ Open **http://localhost:5175**.
     affect that system. The same task can have a different id in each system.
   * Errors appear in the half they belong to. If one server is not running,
     that half shows "Cannot connect to the server on port 500X" and the other
-    half keeps working. Start the server, then press **Retry**.
+    half keeps working.
 
-If a system's server is not running, its own front end shows the same "Cannot
-connect to the server on port 500X" message. Start the server and press
-**Retry**.
+### If something doesn't work
 
-On start-up each server prints how many tasks it loaded. If its save file is
-unreadable, it stops with an error instead of starting empty, so the file is
-never overwritten. Fix or delete `system_*/data/tasks.json` and start again.
+| What you see | Why | Fix |
+|---|---|---|
+| Browser: **"This site can't be reached"** / `ERR_CONNECTION_REFUSED` | That front end is not running. | Start it with `npm run dev` in its `frontend` folder, then reload the page. Check the port: OOP 5173, Imperative 5174, comparison 5175. |
+| Page loads, but shows **"Cannot connect to the server on port 500X"** | That system's server is not running. | Start the server (5001 = OOP, 5002 = Imperative), then click **Retry**. |
+| Terminal: **"Port 517X is already in use"** | That front end is already running in another terminal. | Use the one that is already running, or press Ctrl+C in the other terminal first. |
+| Terminal: **`No module named 'flask'`** | The server was started without the virtual environment. | Start it with `.venv\Scripts\python ...` from the project folder, as shown above. |
+| Server stops at start-up with **"Could not start"** | Its save file `system_*/data/tasks.json` is unreadable. The server stops on purpose so the file is never overwritten. | Fix or delete that file, then start the server again. |
 
 ## Running the tests
 
