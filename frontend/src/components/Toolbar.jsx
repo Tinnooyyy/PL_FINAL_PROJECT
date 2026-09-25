@@ -37,6 +37,16 @@ export default function Toolbar({ query, options, onChange, onReset, onSave, onL
       </label>
 
       <label className="field">
+        <span>Category</span>
+        <select value={query.category} onChange={(e) => update("category", e.target.value)}>
+          <option value="">All</option>
+          {(options?.categories ?? []).map((value) => (
+            <option key={value} value={value}>{formatLabel(value)}</option>
+          ))}
+        </select>
+      </label>
+
+      <label className="field">
         <span>Sort by</span>
         <select value={query.sort_by} onChange={(e) => update("sort_by", e.target.value)}>
           <option value="">Order added</option>

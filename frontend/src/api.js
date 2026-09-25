@@ -42,12 +42,29 @@ export function queryTasks(backend, query) {
   return request(backend, "GET", "/tasks", { params: query });
 }
 
+// ----- Due date format ---------------------------------------------------------
+// The backend stores due dates as "YYYY-MM-DD HH:MM". The form's
+// <input type="datetime-local"> uses "YYYY-MM-DDTHH:MM". These helpers are the
+// only place where one is turned into the other. An empty value stays empty.
+
+export function dueDateToInput(dueDate) {
+  return dueDate.replace(" ", "T");
+}
+
+function dueDateFromInput(value) {
+  return value.replace("T", " ");
+}
+
+function withBackendDueDate(fields) {
+  return { ...fields, due_date: dueDateFromInput(fields.due_date) };
+}
+
 export function addTask(backend, fields) {
-  return request(backend, "POST", "/tasks", { body: fields });
+  return request(backend, "POST", "/tasks", { body: withBackendDueDate(fields) });
 }
 
 export function updateTask(backend, taskId, fields) {
-  return request(backend, "PUT", `/tasks/${taskId}`, { body: fields });
+  return request(backend, "PUT", `/tasks/${taskId}`, { body: withBackendDueDate(fields) });
 }
 
 export function completeTask(backend, taskId) {

@@ -9,9 +9,10 @@ import os
 from datetime import datetime
 
 from .constants import (
-    DATE_FORMAT,
+    CATEGORIES,
     DEFAULT_PRIORITY,
     DEFAULT_STATUS,
+    DUE_DATE_FORMAT,
     EDITABLE_FIELDS,
     MAX_DESCRIPTION_LENGTH,
     MAX_TITLE_LENGTH,
@@ -34,14 +35,19 @@ def clean_text(value, field_name):
     return value.strip()
 
 
-def is_valid_date(text):
-    """Return True if text is a real calendar date written as YYYY-MM-DD."""
+def parse_due_date(text):
+    """Return a datetime for a valid "YYYY-MM-DD HH:MM" text, otherwise None."""
     try:
-        parsed = datetime.strptime(text, DATE_FORMAT)
+        # strptime rejects impossible dates (2026-02-30), impossible times
+        # (25:00) and text without a time part.
+        parsed = datetime.strptime(text, DUE_DATE_FORMAT)
     except ValueError:
-        return False
-    # strptime also accepts "2026-1-5", so insist on the zero-padded form.
-    return parsed.strftime(DATE_FORMAT) == text
+        return None
+    # strptime also accepts "2026-1-5 9:30", so insist on the zero-padded
+    # form; that way every stored due date looks the same.
+    if parsed.strftime(DUE_DATE_FORMAT) != text:
+        return None
+    return parsed
 
 
 def is_whole_number(value):
@@ -70,8 +76,9 @@ def clean_task_data(task_data):
     """
     Check a dictionary of task fields and return a cleaned copy.
 
-    Missing fields get their default values. The returned dictionary has
-    exactly the keys title, description, due_date, priority and status.
+    Missing fields get their default values ("" for category, which then
+    fails the "required" check). The returned dictionary has exactly the keys
+    title, description, due_date, priority, status and category.
     """
     if not isinstance(task_data, dict):
         raise ValueError("Task data must be an object")
@@ -91,6 +98,7 @@ def clean_task_data(task_data):
         "due_date": "",
         "priority": DEFAULT_PRIORITY,
         "status": DEFAULT_STATUS,
+        "category": "",
     }
     for field in EDITABLE_FIELDS:
         if field in task_data:
@@ -99,6 +107,7 @@ def clean_task_data(task_data):
 
     task["priority"] = task["priority"].lower()
     task["status"] = task["status"].lower()
+    task["category"] = task["category"].lower()
 
     check_task_rules(task)
     return task
@@ -113,12 +122,16 @@ def check_task_rules(task):
     if len(task["description"]) > MAX_DESCRIPTION_LENGTH:
         raise ValueError(
             "Description must be at most " + str(MAX_DESCRIPTION_LENGTH) + " characters")
-    if task["due_date"] != "" and not is_valid_date(task["due_date"]):
-        raise ValueError("Due date must be a real date in YYYY-MM-DD format")
+    if task["due_date"] != "" and parse_due_date(task["due_date"]) is None:
+        raise ValueError("Due date must be a real date and time in YYYY-MM-DD HH:MM format")
     if task["priority"] not in PRIORITIES:
         raise ValueError("Priority must be one of: " + ", ".join(PRIORITIES))
     if task["status"] not in STATUSES:
         raise ValueError("Status must be one of: " + ", ".join(STATUSES))
+    if task["category"] == "":
+        raise ValueError("Category is required")
+    if task["category"] not in CATEGORIES:
+        raise ValueError("Category must be one of: " + ", ".join(CATEGORIES))
     # The rule for urgent work: a high-priority task needs a deadline.
     if task["priority"] == "high" and task["due_date"] == "":
         raise ValueError("High-priority tasks must have a due date")

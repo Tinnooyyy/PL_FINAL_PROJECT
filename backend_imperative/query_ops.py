@@ -7,7 +7,7 @@ in half, sorting each half the same way, and merging the two sorted halves.
 """
 
 from . import validation
-from .constants import PRIORITIES, PRIORITY_RANK, SORT_FIELDS, STATUSES
+from .constants import CATEGORIES, PRIORITIES, PRIORITY_RANK, SORT_FIELDS, STATUSES
 
 
 def search_tasks(tasks, keyword):
@@ -22,16 +22,19 @@ def search_tasks(tasks, keyword):
     return results
 
 
-def filter_tasks(tasks, status=None, priority=None):
-    """Return the tasks that match the status and/or priority (None = any)."""
+def filter_tasks(tasks, status=None, priority=None, category=None):
+    """Return the tasks that match the status, priority and/or category (None = any)."""
     status = validation.clean_optional_choice(status, STATUSES, "Status")
     priority = validation.clean_optional_choice(priority, PRIORITIES, "Priority")
+    category = validation.clean_optional_choice(category, CATEGORIES, "Category")
 
     results = []
     for task in tasks:
         if status is not None and task["status"] != status:
             continue
         if priority is not None and task["priority"] != priority:
+            continue
+        if category is not None and task["category"] != category:
             continue
         results.append(task)
     return results
@@ -47,20 +50,21 @@ def compare_tasks(first, second, sort_by, descending):
     if sort_by == "priority":
         difference = PRIORITY_RANK[first["priority"]] - PRIORITY_RANK[second["priority"]]
     else:
-        first_date = first["due_date"]
-        second_date = second["due_date"]
+        # Turn the text into datetime objects so the full date AND time is
+        # compared (None means "no due date").
+        first_due = validation.parse_due_date(first["due_date"])
+        second_due = validation.parse_due_date(second["due_date"])
         # Tasks without a due date always go last, whichever direction we sort.
-        if first_date == "" and second_date != "":
+        if first_due is None and second_due is not None:
             return 1
-        if first_date != "" and second_date == "":
+        if first_due is not None and second_due is None:
             return -1
-        # "YYYY-MM-DD" text compares in the same order as the real dates.
-        if first_date < second_date:
-            difference = -1
-        elif first_date > second_date:
-            difference = 1
-        else:
+        if first_due is None or first_due == second_due:
             difference = 0
+        elif first_due < second_due:
+            difference = -1
+        else:
+            difference = 1
 
     if descending:
         difference = -difference
@@ -120,11 +124,11 @@ def sort_tasks(tasks, sort_by, descending=False):
         tasks, lambda first, second: compare_tasks(first, second, sort_by, descending))
 
 
-def query_tasks(tasks, keyword=None, status=None, priority=None, sort_by=None,
-                descending=False):
+def query_tasks(tasks, keyword=None, status=None, priority=None, category=None,
+                sort_by=None, descending=False):
     """Search, then filter, then sort. Blank arguments skip that step."""
     results = search_tasks(tasks, keyword)
-    results = filter_tasks(results, status, priority)
+    results = filter_tasks(results, status, priority, category)
     if not validation.is_blank(sort_by):
         results = sort_tasks(results, sort_by, descending)
     return results

@@ -13,6 +13,7 @@ import os
 
 from . import query_ops, storage, task_ops, validation
 from .constants import (
+    CATEGORIES,
     DEFAULT_PRIORITY,
     DEFAULT_STATUS,
     PRIORITIES,
@@ -50,10 +51,11 @@ def configure(data_file):
 
 
 def get_options():
-    """Return the allowed priorities, statuses and sort fields, and the defaults."""
+    """Return the allowed priorities, statuses, categories and sort fields, and the defaults."""
     return {
         "priorities": list(PRIORITIES),
         "statuses": list(STATUSES),
+        "categories": list(CATEGORIES),
         "sort_fields": list(SORT_FIELDS),
         "defaults": {"priority": DEFAULT_PRIORITY, "status": DEFAULT_STATUS},
     }
@@ -102,9 +104,9 @@ def search_tasks(keyword):
     return copy_tasks(query_ops.search_tasks(store["tasks"], keyword))
 
 
-def filter_tasks(status=None, priority=None):
-    """Return tasks with the given status and/or priority."""
-    return copy_tasks(query_ops.filter_tasks(store["tasks"], status, priority))
+def filter_tasks(status=None, priority=None, category=None):
+    """Return tasks with the given status, priority and/or category."""
+    return copy_tasks(query_ops.filter_tasks(store["tasks"], status, priority, category))
 
 
 def sort_tasks(sort_by, descending=False):
@@ -112,11 +114,11 @@ def sort_tasks(sort_by, descending=False):
     return copy_tasks(query_ops.sort_tasks(store["tasks"], sort_by, descending))
 
 
-def query_tasks(keyword=None, status=None, priority=None, sort_by=None,
-                descending=False):
+def query_tasks(keyword=None, status=None, priority=None, category=None,
+                sort_by=None, descending=False):
     """Search, filter and sort in one call."""
     return copy_tasks(query_ops.query_tasks(
-        store["tasks"], keyword, status, priority, sort_by, descending))
+        store["tasks"], keyword, status, priority, category, sort_by, descending))
 
 
 def save_tasks():

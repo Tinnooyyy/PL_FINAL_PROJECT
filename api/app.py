@@ -88,6 +88,7 @@ def query_tasks():
         request.args.get("keyword"),
         request.args.get("status"),
         request.args.get("priority"),
+        request.args.get("category"),
         request.args.get("sort_by"),
         request.args.get("descending", False),
     )

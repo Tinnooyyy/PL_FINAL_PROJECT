@@ -13,6 +13,7 @@ const EMPTY_QUERY = {
   keyword: "",
   status: "",
   priority: "",
+  category: "",
   sort_by: "",
   descending: false,
 };

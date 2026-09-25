@@ -15,6 +15,7 @@ export default function TaskItem({ task, isEditing, onEdit, onComplete, onDelete
             {formatLabel(task.priority)} priority
           </span>
           <span className="tag" data-status={task.status}>{formatLabel(task.status)}</span>
+          <span className="tag" data-category={task.category}>{formatLabel(task.category)}</span>
           <span className="task__due">
             {task.due_date ? `Due ${task.due_date}` : "No due date"}
           </span>

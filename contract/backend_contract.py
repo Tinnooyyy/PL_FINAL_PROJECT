@@ -19,10 +19,11 @@ these keys, in this order:
         "id":          int,   # assigned by the backend, starts at 1
         "title":       str,   # required, 1-100 characters after trimming
         "description": str,   # optional, up to 500 characters ("" if empty)
-        "due_date":    str,   # "YYYY-MM-DD", or "" for no due date
+        "due_date":    str,   # "YYYY-MM-DD HH:MM" (24-hour), or "" for none
         "priority":    str,   # "low" | "medium" | "high"   (default "medium")
         "status":      str,   # "pending" | "in_progress" | "completed"
                               #                              (default "pending")
+        "category":    str,   # "personal" | "academic" | "work"  (required)
     }
 
 Lists of tasks are returned as Python lists of these dictionaries.
@@ -32,16 +33,23 @@ BUSINESS RULES (enforced identically by both backends)
 ------------------------------------------------------
 * The title is required and may not be blank or longer than 100 characters.
 * The description may not be longer than 500 characters.
-* A due date, when given, must be a real calendar date in YYYY-MM-DD form.
-* Priority and status must be one of the allowed values (case-insensitive
-  on input, always stored in lowercase).
+* A due date, when given, must be a real date AND time written exactly as
+  "YYYY-MM-DD HH:MM" (24-hour clock), e.g. "2026-10-05 14:30". A date
+  without a time is rejected. It is checked by parsing it with datetime.
+* Priority, status and category must be one of the allowed values
+  (case-insensitive on input, always stored in lowercase).
+* The category is required: there is no default.
 * A HIGH-priority task must have a due date.
 * Task data may only contain the fields title, description, due_date,
-  priority and status. Any other key is rejected.
+  priority, status and category. Any other key is rejected.
+* Checks run in this order, and the first failure is reported: title,
+  description, due date, priority, status, category, then the high-priority
+  rule.
 * Completing a task that is already completed is an error.
 * Search is case-insensitive and looks in the title and the description.
-* Sorting: ties are broken by id (ascending). Tasks with no due date are
-  always placed last when sorting by due date, in either direction.
+* Sorting: ties are broken by id (ascending). Sorting by due date compares
+  the full date and time. Tasks with no due date are always placed last when
+  sorting by due date, in either direction.
 * Priority order is low < medium < high.
 * Every change (add, update, complete, delete) is saved to the data file
   automatically.
@@ -71,8 +79,10 @@ CONTRACT = {
 
     # The allowed values and defaults, so the front end does not have to
     # hard-code them. Returns
-    # {"priorities": [...], "statuses": [...], "sort_fields": [...],
+    # {"priorities": [...], "statuses": [...], "categories": [...],
+    #  "sort_fields": [...],
     #  "defaults": {"priority": "medium", "status": "pending"}}
+    # (category has no default because it is required)
     "get_options": "()",
 
     # Create a task. task_data is a dict with any of the task fields except id.
@@ -98,9 +108,9 @@ CONTRACT = {
     # A blank keyword returns all tasks.
     "search_tasks": "(keyword)",
 
-    # Returns tasks matching the given status and/or priority.
+    # Returns tasks matching every given filter (status, priority, category).
     # None (or "") means "do not filter on this field".
-    "filter_tasks": "(status=None, priority=None)",
+    "filter_tasks": "(status=None, priority=None, category=None)",
 
     # Returns all tasks sorted by "due_date" or "priority".
     # descending may be a bool or the text "true"/"false".
@@ -109,8 +119,8 @@ CONTRACT = {
     # Search, then filter, then sort, in a single call. Any argument that is
     # None (or "") skips that step. This is what the React UI uses.
     "query_tasks": (
-        "(keyword=None, status=None, priority=None, sort_by=None, "
-        "descending=False)"
+        "(keyword=None, status=None, priority=None, category=None, "
+        "sort_by=None, descending=False)"
     ),
 
     # Write all tasks to the data file. Returns {"saved": <number of tasks>}
@@ -122,4 +132,5 @@ CONTRACT = {
 }
 
 # The keys of a task dictionary, in the order both backends return them.
-TASK_FIELDS = ["id", "title", "description", "due_date", "priority", "status"]
+TASK_FIELDS = ["id", "title", "description", "due_date", "priority", "status",
+               "category"]

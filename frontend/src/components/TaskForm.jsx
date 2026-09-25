@@ -1,15 +1,18 @@
 import { useState } from "react";
+import { dueDateToInput } from "../api.js";
 import { formatLabel } from "../labels.js";
 
 // Starting values: the task being edited, or blanks plus the backend's defaults.
+// due_date is kept in the date-time picker's own format; api.js converts it.
 function initialFields(task, options) {
   if (task) {
     return {
       title: task.title,
       description: task.description,
-      due_date: task.due_date,
+      due_date: dueDateToInput(task.due_date),
       priority: task.priority,
       status: task.status,
+      category: task.category,
     };
   }
   return {
@@ -18,10 +21,11 @@ function initialFields(task, options) {
     due_date: "",
     priority: options?.defaults.priority ?? "",
     status: options?.defaults.status ?? "",
+    category: "", // no default: the backend requires the user to choose one
   };
 }
 
-// Add / edit form. It does no validation: whatever is typed is sent to the
+// Add / edit form. It does no validation: whatever is entered is sent to the
 // backend, and any problem comes back as an error message.
 export default function TaskForm({ task, options, onSubmit, onCancel }) {
   const [fields, setFields] = useState(() => initialFields(task, options));
@@ -56,11 +60,27 @@ export default function TaskForm({ task, options, onSubmit, onCancel }) {
           placeholder="Optional details" />
       </label>
 
-      <label className="field">
-        <span>Due date</span>
-        <input value={fields.due_date} onChange={(e) => update("due_date", e.target.value)}
-          placeholder="YYYY-MM-DD" inputMode="numeric" />
+      <div className="field">
+        <label htmlFor="due-date">Due date and time</label>
+        <div className="field__inline">
+          <input id="due-date" type="datetime-local" value={fields.due_date}
+            onChange={(e) => update("due_date", e.target.value)} />
+          <button type="button" className="button button--small"
+            onClick={() => update("due_date", "")} disabled={fields.due_date === ""}>
+            Clear
+          </button>
+        </div>
         <small>Leave empty for no due date.</small>
+      </div>
+
+      <label className="field">
+        <span>Category</span>
+        <select value={fields.category} onChange={(e) => update("category", e.target.value)}>
+          <option value="">Choose a category</option>
+          {(options?.categories ?? []).map((value) => (
+            <option key={value} value={value}>{formatLabel(value)}</option>
+          ))}
+        </select>
       </label>
 
       <div className="field-row">

@@ -2,7 +2,7 @@
 The TaskManager class: owns the list of Task objects and every operation on it.
 """
 
-from .constants import PRIORITIES, PRIORITY_RANK, SORT_FIELDS, STATUSES
+from .constants import CATEGORIES, PRIORITIES, PRIORITY_RANK, SORT_FIELDS, STATUSES
 from .exceptions import (
     TaskNotFoundError,
     TaskStorageError,
@@ -79,19 +79,19 @@ class TaskManager:
         """Return tasks whose title or description contains the keyword."""
         return self._search(self._tasks, keyword)
 
-    def filter_tasks(self, status=None, priority=None):
-        """Return tasks with the given status and/or priority."""
-        return self._filter(self._tasks, status, priority)
+    def filter_tasks(self, status=None, priority=None, category=None):
+        """Return tasks with the given status, priority and/or category."""
+        return self._filter(self._tasks, status, priority, category)
 
     def sort_tasks(self, sort_by, descending=False):
         """Return all tasks sorted by "due_date" or "priority"."""
         return self._sort(self._tasks, sort_by, descending)
 
     def query_tasks(self, keyword=None, status=None, priority=None,
-                    sort_by=None, descending=False):
+                    category=None, sort_by=None, descending=False):
         """Search, then filter, then sort. Blank arguments skip that step."""
         results = self._search(self._tasks, keyword)
-        results = self._filter(results, status, priority)
+        results = self._filter(results, status, priority, category)
         if not self._is_blank(sort_by):
             results = self._sort(results, sort_by, descending)
         return results
@@ -153,15 +153,17 @@ class TaskManager:
             return list(tasks)
         return [task for task in tasks if task.matches_keyword(keyword)]
 
-    def _filter(self, tasks, status, priority):
-        """Return the tasks from `tasks` that match the status and priority."""
+    def _filter(self, tasks, status, priority, category):
+        """Return the tasks from `tasks` that match the status, priority and category."""
         status = self._optional_choice(status, STATUSES, "Status")
         priority = self._optional_choice(priority, PRIORITIES, "Priority")
+        category = self._optional_choice(category, CATEGORIES, "Category")
         # filter() is a higher-order function: it calls the lambda on every
         # task and keeps the ones for which it returns True.
         return list(filter(
             lambda task: (status is None or task.status == status)
-            and (priority is None or task.priority == priority),
+            and (priority is None or task.priority == priority)
+            and (category is None or task.category == category),
             tasks,
         ))
 
@@ -181,8 +183,10 @@ class TaskManager:
         # Tasks without a due date always go last, whichever direction we sort.
         dated = [task for task in by_id if task.due_date != ""]
         undated = [task for task in by_id if task.due_date == ""]
-        # "YYYY-MM-DD" text sorts in the same order as the real dates.
-        return sorted(dated, key=lambda task: task.due_date, reverse=descending) + undated
+        # Compare datetime objects, so tasks due on the same day are ordered
+        # by their time.
+        return sorted(dated, key=lambda task: task.due_datetime,
+                      reverse=descending) + undated
 
     @staticmethod
     def _is_blank(value):

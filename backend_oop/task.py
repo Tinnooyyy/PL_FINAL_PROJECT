@@ -13,9 +13,10 @@ polymorphism: the same call behaves differently depending on the object's class.
 from datetime import datetime
 
 from .constants import (
-    DATE_FORMAT,
+    CATEGORIES,
     DEFAULT_PRIORITY,
     DEFAULT_STATUS,
+    DUE_DATE_FORMAT,
     EDITABLE_FIELDS,
     MAX_DESCRIPTION_LENGTH,
     MAX_TITLE_LENGTH,
@@ -26,10 +27,10 @@ from .exceptions import TaskValidationError
 
 
 class Task:
-    """A single to-do item with a title, description, due date, priority and status."""
+    """A single to-do item with a title, description, due date, priority, status and category."""
 
     def __init__(self, task_id, title="", description="", due_date="",
-                 priority=DEFAULT_PRIORITY, status=DEFAULT_STATUS):
+                 priority=DEFAULT_PRIORITY, status=DEFAULT_STATUS, category=""):
         """Create a task from raw values, cleaning and validating them."""
         # The leading underscore marks these attributes as "protected":
         # other code should read them through the properties below and change
@@ -40,6 +41,7 @@ class Task:
         self._due_date = self._clean_text(due_date, "due_date")
         self._priority = self._clean_text(priority, "priority").lower()
         self._status = self._clean_text(status, "status").lower()
+        self._category = self._clean_text(category, "category").lower()
         self.validate()
 
     # ----- Read-only properties (encapsulation) -----------------------------
@@ -61,8 +63,15 @@ class Task:
 
     @property
     def due_date(self):
-        """The due date as "YYYY-MM-DD", or "" if there is none."""
+        """The due date as "YYYY-MM-DD HH:MM", or "" if there is none."""
         return self._due_date
+
+    @property
+    def due_datetime(self):
+        """The due date as a datetime object (used for sorting), or None."""
+        if self._due_date == "":
+            return None
+        return self._parse_due_date(self._due_date)
 
     @property
     def priority(self):
@@ -73,6 +82,11 @@ class Task:
     def status(self):
         """One of "pending", "in_progress" or "completed"."""
         return self._status
+
+    @property
+    def category(self):
+        """One of "personal", "academic" or "work"."""
+        return self._category
 
     # ----- Behaviour ---------------------------------------------------------
 
@@ -86,15 +100,20 @@ class Task:
         if len(self._description) > MAX_DESCRIPTION_LENGTH:
             raise TaskValidationError(
                 f"Description must be at most {MAX_DESCRIPTION_LENGTH} characters")
-        if self._due_date != "" and not self._is_valid_date(self._due_date):
+        if self._due_date != "" and self._parse_due_date(self._due_date) is None:
             raise TaskValidationError(
-                "Due date must be a real date in YYYY-MM-DD format")
+                "Due date must be a real date and time in YYYY-MM-DD HH:MM format")
         if self._priority not in PRIORITIES:
             raise TaskValidationError(
                 "Priority must be one of: " + ", ".join(PRIORITIES))
         if self._status not in STATUSES:
             raise TaskValidationError(
                 "Status must be one of: " + ", ".join(STATUSES))
+        if self._category == "":
+            raise TaskValidationError("Category is required")
+        if self._category not in CATEGORIES:
+            raise TaskValidationError(
+                "Category must be one of: " + ", ".join(CATEGORIES))
 
     def mark_complete(self):
         """Change the status to "completed"; a task can only be completed once."""
@@ -115,6 +134,7 @@ class Task:
             "due_date": self._due_date,
             "priority": self._priority,
             "status": self._status,
+            "category": self._category,
         }
 
     def __repr__(self):
@@ -134,14 +154,19 @@ class Task:
         return value.strip()
 
     @staticmethod
-    def _is_valid_date(text):
-        """Return True if text is a real calendar date written as YYYY-MM-DD."""
+    def _parse_due_date(text):
+        """Return a datetime for a valid "YYYY-MM-DD HH:MM" text, otherwise None."""
         try:
-            parsed = datetime.strptime(text, DATE_FORMAT)
+            # strptime rejects impossible dates (2026-02-30), impossible times
+            # (25:00) and text without a time part.
+            parsed = datetime.strptime(text, DUE_DATE_FORMAT)
         except ValueError:
-            return False
-        # strptime also accepts "2026-1-5", so insist on the zero-padded form.
-        return parsed.strftime(DATE_FORMAT) == text
+            return None
+        # strptime also accepts "2026-1-5 9:30", so insist on the zero-padded
+        # form; that way every stored due date looks the same.
+        if parsed.strftime(DUE_DATE_FORMAT) != text:
+            return None
+        return parsed
 
 
 class UrgentTask(Task):

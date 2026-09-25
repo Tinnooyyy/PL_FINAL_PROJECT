@@ -20,6 +20,9 @@ if PROJECT_ROOT not in sys.path:
 
 from contract.backend_contract import TASK_FIELDS  # noqa: E402
 
+DUE_DATE_ERROR = "Due date must be a real date and time in YYYY-MM-DD HH:MM format"
+CATEGORY_ERROR = "Category must be one of: personal, academic, work"
+
 
 class SharedBackendTests:
     """Test cases every backend must pass. Subclasses set `backend`."""
@@ -39,17 +42,26 @@ class SharedBackendTests:
         self.temp_dir.cleanup()
 
     def add(self, **fields):
-        """Shortcut: add a task using keyword arguments as the task data."""
+        """
+        Shortcut: add a task using keyword arguments as the task data.
+
+        Uses category "personal" unless the test gives one, because every
+        task needs a category. Tests about a MISSING category call
+        self.backend.add_task directly instead.
+        """
+        fields.setdefault("category", "personal")
         return self.backend.add_task(fields)
 
     def add_sample_tasks(self):
         """Add four tasks that the search/filter/sort tests use."""
-        self.add(title="Buy milk", priority="low", due_date="2026-10-05")
+        self.add(title="Buy milk", priority="low", due_date="2026-10-05 09:00",
+                 category="personal")
         self.add(title="Pay rent", description="Send to landlord",
-                 priority="high", due_date="2026-10-01")
-        self.add(title="Read book", description="Chapter about MILK")
-        self.add(title="Plan trip", priority="medium", due_date="2026-10-01",
-                 status="in_progress")
+                 priority="high", due_date="2026-10-01 18:00", category="personal")
+        self.add(title="Read book", description="Chapter about MILK",
+                 category="academic")
+        self.add(title="Plan trip", priority="medium", due_date="2026-10-01 18:00",
+                 status="in_progress", category="work")
 
     def ids(self, tasks):
         """Return just the ids of a list of tasks."""
@@ -66,13 +78,20 @@ class SharedBackendTests:
         with open(self.data_file, "w", encoding="utf-8") as file:
             file.write(content)
 
+    def saved_task(self, **fields):
+        """A complete task record as it appears in a save file."""
+        record = {"id": 1, "title": "A", "description": "", "due_date": "",
+                  "priority": "low", "status": "pending", "category": "personal"}
+        record.update(fields)
+        return record
+
     # ----- Adding tasks (normal cases) -------------------------------------------
 
     def test_add_task_uses_defaults(self):
         task = self.add(title="Buy milk")
         self.assertEqual(task, {
             "id": 1, "title": "Buy milk", "description": "", "due_date": "",
-            "priority": "medium", "status": "pending",
+            "priority": "medium", "status": "pending", "category": "personal",
         })
 
     def test_add_task_returns_fields_in_contract_order(self):
@@ -81,16 +100,18 @@ class SharedBackendTests:
 
     def test_add_task_trims_text_and_lowercases_choices(self):
         task = self.add(title="  Buy milk  ", description=" 2 litres ",
-                        priority="LOW", status="In_Progress")
+                        priority="LOW", status="In_Progress", category=" WORK ")
         self.assertEqual(task["title"], "Buy milk")
         self.assertEqual(task["description"], "2 litres")
         self.assertEqual(task["priority"], "low")
         self.assertEqual(task["status"], "in_progress")
+        self.assertEqual(task["category"], "work")
 
     def test_add_task_with_all_fields(self):
         task = self.add(title="Pay rent", description="Landlord",
-                        due_date="2026-10-01", priority="high", status="pending")
-        self.assertEqual(task["due_date"], "2026-10-01")
+                        due_date="2026-10-01 17:30", priority="high",
+                        status="pending", category="personal")
+        self.assertEqual(task["due_date"], "2026-10-01 17:30")
         self.assertEqual(task["priority"], "high")
 
     def test_ids_increase_by_one(self):
@@ -102,63 +123,52 @@ class SharedBackendTests:
         task = self.add(title="x" * 100)
         self.assertEqual(len(task["title"]), 100)
 
-    def test_leap_day_is_a_valid_date(self):
-        task = self.add(title="Leap", due_date="2028-02-29")
-        self.assertEqual(task["due_date"], "2028-02-29")
-
     # ----- Adding tasks (error cases) --------------------------------------------
 
     def test_empty_title_is_rejected(self):
         self.assert_error(ValueError, "Title is required",
-                          self.backend.add_task, {"title": ""})
+                          self.backend.add_task, {"title": "", "category": "work"})
 
     def test_whitespace_only_title_is_rejected(self):
         self.assert_error(ValueError, "Title is required",
-                          self.backend.add_task, {"title": "   "})
+                          self.backend.add_task, {"title": "   ", "category": "work"})
 
     def test_missing_title_is_rejected(self):
         self.assert_error(ValueError, "Title is required",
-                          self.backend.add_task, {"priority": "low"})
+                          self.backend.add_task, {"priority": "low", "category": "work"})
 
     def test_title_longer_than_100_characters_is_rejected(self):
         self.assert_error(ValueError, "Title must be at most 100 characters",
-                          self.backend.add_task, {"title": "x" * 101})
+                          self.backend.add_task, {"title": "x" * 101, "category": "work"})
 
     def test_description_longer_than_500_characters_is_rejected(self):
         self.assert_error(ValueError, "Description must be at most 500 characters",
-                          self.backend.add_task, {"title": "A", "description": "x" * 501})
+                          self.backend.add_task,
+                          {"title": "A", "description": "x" * 501, "category": "work"})
 
     def test_title_that_is_not_text_is_rejected(self):
         self.assert_error(ValueError, "Title must be text",
-                          self.backend.add_task, {"title": 42})
-
-    def test_impossible_date_is_rejected(self):
-        self.assert_error(ValueError, "Due date must be a real date in YYYY-MM-DD format",
-                          self.backend.add_task, {"title": "A", "due_date": "2026-02-30"})
-
-    def test_wrongly_formatted_date_is_rejected(self):
-        self.assert_error(ValueError, "Due date must be a real date in YYYY-MM-DD format",
-                          self.backend.add_task, {"title": "A", "due_date": "30/09/2026"})
-
-    def test_date_without_leading_zeros_is_rejected(self):
-        self.assert_error(ValueError, "Due date must be a real date in YYYY-MM-DD format",
-                          self.backend.add_task, {"title": "A", "due_date": "2026-9-5"})
+                          self.backend.add_task, {"title": 42, "category": "work"})
 
     def test_invalid_priority_is_rejected(self):
         self.assert_error(ValueError, "Priority must be one of: low, medium, high",
-                          self.backend.add_task, {"title": "A", "priority": "urgent"})
+                          self.backend.add_task,
+                          {"title": "A", "priority": "urgent", "category": "work"})
 
     def test_invalid_status_is_rejected(self):
         self.assert_error(ValueError, "Status must be one of: pending, in_progress, completed",
-                          self.backend.add_task, {"title": "A", "status": "done"})
+                          self.backend.add_task,
+                          {"title": "A", "status": "done", "category": "work"})
 
     def test_high_priority_without_due_date_is_rejected(self):
         self.assert_error(ValueError, "High-priority tasks must have a due date",
-                          self.backend.add_task, {"title": "A", "priority": "high"})
+                          self.backend.add_task,
+                          {"title": "A", "priority": "high", "category": "work"})
 
     def test_unknown_fields_are_rejected(self):
         self.assert_error(ValueError, "Unknown field(s): colour, id",
-                          self.backend.add_task, {"title": "A", "id": 5, "colour": "red"})
+                          self.backend.add_task,
+                          {"title": "A", "id": 5, "colour": "red", "category": "work"})
 
     def test_task_data_that_is_not_a_dictionary_is_rejected(self):
         self.assert_error(ValueError, "Task data must be an object",
@@ -168,6 +178,99 @@ class SharedBackendTests:
         with self.assertRaises(ValueError):
             self.add(title="")
         self.assertEqual(self.add(title="A")["id"], 1)
+
+    # ----- Category ------------------------------------------------------------
+
+    def test_add_task_with_each_category(self):
+        for category in ("personal", "academic", "work"):
+            with self.subTest(category=category):
+                task = self.add(title="A", category=category)
+                self.assertEqual(task["category"], category)
+
+    def test_invalid_category_is_rejected(self):
+        self.assert_error(ValueError, CATEGORY_ERROR,
+                          self.backend.add_task, {"title": "A", "category": "hobby"})
+
+    def test_missing_category_is_rejected(self):
+        self.assert_error(ValueError, "Category is required",
+                          self.backend.add_task, {"title": "A"})
+
+    def test_blank_category_is_rejected(self):
+        self.assert_error(ValueError, "Category is required",
+                          self.backend.add_task, {"title": "A", "category": "  "})
+
+    def test_category_that_is_not_text_is_rejected(self):
+        self.assert_error(ValueError, "Category must be text",
+                          self.backend.add_task, {"title": "A", "category": 3})
+
+    def test_update_category(self):
+        self.add(title="A", category="personal")
+        updated = self.backend.update_task(1, {"category": "Academic"})
+        self.assertEqual(updated["category"], "academic")
+        self.assertEqual(self.backend.get_task(1)["category"], "academic")
+
+    def test_update_to_invalid_category_is_rejected_and_keeps_old_one(self):
+        self.add(title="A", category="work")
+        self.assert_error(ValueError, CATEGORY_ERROR,
+                          self.backend.update_task, 1, {"category": "school"})
+        self.assertEqual(self.backend.get_task(1)["category"], "work")
+
+    def test_update_cannot_remove_the_category(self):
+        self.add(title="A", category="work")
+        self.assert_error(ValueError, "Category is required",
+                          self.backend.update_task, 1, {"category": ""})
+
+    # ----- Due date and time -----------------------------------------------------
+
+    def test_valid_date_and_time_is_stored_unchanged(self):
+        task = self.add(title="A", due_date="2026-10-05 14:30")
+        self.assertEqual(task["due_date"], "2026-10-05 14:30")
+
+    def test_midnight_and_last_minute_are_valid_times(self):
+        self.assertEqual(self.add(title="A", due_date="2026-10-05 00:00")["due_date"],
+                         "2026-10-05 00:00")
+        self.assertEqual(self.add(title="B", due_date="2026-10-05 23:59")["due_date"],
+                         "2026-10-05 23:59")
+
+    def test_leap_day_is_a_valid_date(self):
+        task = self.add(title="Leap", due_date="2028-02-29 12:00")
+        self.assertEqual(task["due_date"], "2028-02-29 12:00")
+
+    def test_invalid_hour_is_rejected(self):
+        self.assert_error(ValueError, DUE_DATE_ERROR, self.backend.add_task,
+                          {"title": "A", "due_date": "2026-10-05 25:00", "category": "work"})
+
+    def test_invalid_minute_is_rejected(self):
+        self.assert_error(ValueError, DUE_DATE_ERROR, self.backend.add_task,
+                          {"title": "A", "due_date": "2026-10-05 10:60", "category": "work"})
+
+    def test_date_without_time_is_rejected(self):
+        self.assert_error(ValueError, DUE_DATE_ERROR, self.backend.add_task,
+                          {"title": "A", "due_date": "2026-10-05", "category": "work"})
+
+    def test_impossible_date_with_valid_time_is_rejected(self):
+        self.assert_error(ValueError, DUE_DATE_ERROR, self.backend.add_task,
+                          {"title": "A", "due_date": "2026-02-30 10:00", "category": "work"})
+
+    def test_wrongly_formatted_date_is_rejected(self):
+        self.assert_error(ValueError, DUE_DATE_ERROR, self.backend.add_task,
+                          {"title": "A", "due_date": "05/10/2026 10:00", "category": "work"})
+
+    def test_date_and_time_without_leading_zeros_is_rejected(self):
+        self.assert_error(ValueError, DUE_DATE_ERROR, self.backend.add_task,
+                          {"title": "A", "due_date": "2026-9-5 9:30", "category": "work"})
+
+    def test_seconds_are_rejected(self):
+        self.assert_error(ValueError, DUE_DATE_ERROR, self.backend.add_task,
+                          {"title": "A", "due_date": "2026-10-05 10:00:00", "category": "work"})
+
+    def test_12_hour_clock_is_rejected(self):
+        self.assert_error(ValueError, DUE_DATE_ERROR, self.backend.add_task,
+                          {"title": "A", "due_date": "2026-10-05 2:30 PM", "category": "work"})
+
+    def test_high_priority_accepts_date_with_time(self):
+        task = self.add(title="A", priority="high", due_date="2026-10-05 08:00")
+        self.assertEqual(task["priority"], "high")
 
     # ----- Reading tasks ---------------------------------------------------------
 
@@ -200,19 +303,21 @@ class SharedBackendTests:
     # ----- Updating tasks ------------------------------------------------------
 
     def test_update_changes_only_the_given_fields(self):
-        self.add(title="A", description="old")
+        self.add(title="A", description="old", category="academic")
         updated = self.backend.update_task(1, {"description": "new"})
         self.assertEqual(updated["title"], "A")
         self.assertEqual(updated["description"], "new")
+        self.assertEqual(updated["category"], "academic")
         self.assertEqual(self.backend.get_task(1), updated)
 
     def test_update_to_high_priority_with_due_date(self):
         self.add(title="A")
-        updated = self.backend.update_task(1, {"priority": "high", "due_date": "2026-12-01"})
+        updated = self.backend.update_task(
+            1, {"priority": "high", "due_date": "2026-12-01 09:15"})
         self.assertEqual(updated["priority"], "high")
 
     def test_update_from_high_priority_allows_removing_due_date(self):
-        self.add(title="A", priority="high", due_date="2026-12-01")
+        self.add(title="A", priority="high", due_date="2026-12-01 09:15")
         updated = self.backend.update_task(1, {"priority": "low", "due_date": ""})
         self.assertEqual((updated["priority"], updated["due_date"]), ("low", ""))
 
@@ -220,6 +325,12 @@ class SharedBackendTests:
         self.add(title="A")
         self.assert_error(ValueError, "High-priority tasks must have a due date",
                           self.backend.update_task, 1, {"priority": "high"})
+
+    def test_update_to_date_without_time_is_rejected(self):
+        self.add(title="A", due_date="2026-10-05 10:00")
+        self.assert_error(ValueError, DUE_DATE_ERROR,
+                          self.backend.update_task, 1, {"due_date": "2026-10-06"})
+        self.assertEqual(self.backend.get_task(1)["due_date"], "2026-10-05 10:00")
 
     def test_failed_update_leaves_task_unchanged(self):
         self.add(title="A")
@@ -317,6 +428,19 @@ class SharedBackendTests:
         result = self.backend.filter_tasks(status="pending", priority="medium")
         self.assertEqual(self.ids(result), [3])
 
+    def test_filter_by_category(self):
+        self.add_sample_tasks()
+        self.assertEqual(self.ids(self.backend.filter_tasks(category="personal")), [1, 2])
+        self.assertEqual(self.ids(self.backend.filter_tasks(category="academic")), [3])
+        self.assertEqual(self.ids(self.backend.filter_tasks(category="WORK")), [4])
+
+    def test_filter_by_category_combined_with_status_and_priority(self):
+        self.add_sample_tasks()
+        result = self.backend.filter_tasks("pending", "low", "personal")
+        self.assertEqual(self.ids(result), [1])
+        result = self.backend.filter_tasks(status="in_progress", category="personal")
+        self.assertEqual(result, [])
+
     def test_filter_with_no_arguments_returns_all(self):
         self.add_sample_tasks()
         self.assertEqual(self.ids(self.backend.filter_tasks()), [1, 2, 3, 4])
@@ -325,16 +449,32 @@ class SharedBackendTests:
         self.assert_error(ValueError, "Status must be one of: pending, in_progress, completed",
                           self.backend.filter_tasks, "finished", None)
 
+    def test_filter_with_invalid_category_is_rejected(self):
+        self.assert_error(ValueError, CATEGORY_ERROR,
+                          self.backend.filter_tasks, None, None, "hobby")
+
     # ----- Sorting -------------------------------------------------------------
 
     def test_sort_by_due_date_puts_undated_tasks_last(self):
         self.add_sample_tasks()
-        # Tasks 2 and 4 share a date, so they are ordered by id.
+        # Tasks 2 and 4 are due at exactly the same moment, so they are ordered by id.
         self.assertEqual(self.ids(self.backend.sort_tasks("due_date")), [2, 4, 1, 3])
 
     def test_sort_by_due_date_descending_still_puts_undated_last(self):
         self.add_sample_tasks()
         self.assertEqual(self.ids(self.backend.sort_tasks("due_date", True)), [1, 2, 4, 3])
+
+    def test_sort_same_day_tasks_by_time(self):
+        self.add(title="Evening", due_date="2026-10-05 18:45")
+        self.add(title="Morning", due_date="2026-10-05 07:15")
+        self.add(title="Noon", due_date="2026-10-05 12:00")
+        self.assertEqual(self.ids(self.backend.sort_tasks("due_date")), [2, 3, 1])
+        self.assertEqual(self.ids(self.backend.sort_tasks("due_date", True)), [1, 3, 2])
+
+    def test_sort_time_does_not_beat_an_earlier_day(self):
+        self.add(title="Late on day 1", due_date="2026-10-01 23:59")
+        self.add(title="Early on day 2", due_date="2026-10-02 00:01")
+        self.assertEqual(self.ids(self.backend.sort_tasks("due_date")), [1, 2])
 
     def test_sort_by_priority_ascending(self):
         self.add_sample_tasks()
@@ -361,14 +501,20 @@ class SharedBackendTests:
 
     def test_query_combines_search_filter_and_sort(self):
         self.add_sample_tasks()
-        self.add(title="Buy bread", priority="high", due_date="2026-09-30")
+        self.add(title="Buy bread", priority="high", due_date="2026-09-30 12:00")
         result = self.backend.query_tasks(keyword="buy", status="pending",
                                           sort_by="due_date")
         self.assertEqual(self.ids(result), [5, 1])
 
+    def test_query_filters_by_category(self):
+        self.add_sample_tasks()
+        result = self.backend.query_tasks(keyword="", category="personal",
+                                          sort_by="due_date")
+        self.assertEqual(self.ids(result), [2, 1])
+
     def test_query_with_blank_arguments_returns_all(self):
         self.add_sample_tasks()
-        result = self.backend.query_tasks("", "", "", "", "false")
+        result = self.backend.query_tasks("", "", "", "", "", "false")
         self.assertEqual(self.ids(result), [1, 2, 3, 4])
 
     # ----- Options ---------------------------------------------------------------
@@ -377,6 +523,7 @@ class SharedBackendTests:
         self.assertEqual(self.backend.get_options(), {
             "priorities": ["low", "medium", "high"],
             "statuses": ["pending", "in_progress", "completed"],
+            "categories": ["personal", "academic", "work"],
             "sort_fields": ["due_date", "priority"],
             "defaults": {"priority": "medium", "status": "pending"},
         })
@@ -385,15 +532,17 @@ class SharedBackendTests:
 
     def test_changes_are_saved_automatically(self):
         self.add(title="A")
-        self.add(title="B")
+        self.add(title="B", category="work", due_date="2026-10-05 10:30")
         self.backend.complete_task(2)
         with open(self.data_file, encoding="utf-8") as file:
             saved = json.load(file)
         self.assertEqual([task["title"] for task in saved["tasks"]], ["A", "B"])
         self.assertEqual(saved["tasks"][1]["status"], "completed")
+        self.assertEqual(saved["tasks"][1]["category"], "work")
+        self.assertEqual(saved["tasks"][1]["due_date"], "2026-10-05 10:30")
 
     def test_tasks_persist_after_reconfiguring(self):
-        self.add(title="A", priority="high", due_date="2026-11-11")
+        self.add(title="A", priority="high", due_date="2026-11-11 11:11", category="work")
         self.add(title="B")
         before = self.backend.get_all_tasks()
         self.assertEqual(self.backend.configure(self.data_file), {"loaded": 2})
@@ -413,8 +562,7 @@ class SharedBackendTests:
     def test_load_tasks_reads_changes_made_to_the_file(self):
         self.add(title="A")
         self.write_save_file(json.dumps({"next_id": 10, "tasks": [
-            {"id": 4, "title": "From file", "description": "", "due_date": "",
-             "priority": "low", "status": "pending"},
+            self.saved_task(id=4, title="From file", category="academic"),
         ]}))
         self.assertEqual(self.backend.load_tasks(), {"loaded": 1})
         self.assertEqual(self.backend.get_task(4)["title"], "From file")
@@ -436,17 +584,28 @@ class SharedBackendTests:
                           self.backend.load_tasks)
 
     def test_save_file_with_invalid_task_raises_os_error(self):
-        self.write_save_file(json.dumps({"next_id": 2, "tasks": [
-            {"id": 1, "title": "", "description": "", "due_date": "",
-             "priority": "low", "status": "pending"},
-        ]}))
+        self.write_save_file(json.dumps({"next_id": 2, "tasks": [self.saved_task(title="")]}))
         self.assert_error(OSError,
                           "The save file 'tasks.json' contains an invalid task: Title is required",
                           self.backend.load_tasks)
 
+    def test_save_file_task_without_category_raises_os_error(self):
+        record = self.saved_task()
+        del record["category"]
+        self.write_save_file(json.dumps({"next_id": 2, "tasks": [record]}))
+        self.assert_error(OSError,
+                          "The save file 'tasks.json' contains an invalid task: Category is required",
+                          self.backend.load_tasks)
+
+    def test_save_file_task_with_date_but_no_time_raises_os_error(self):
+        record = self.saved_task(due_date="2026-10-05")
+        self.write_save_file(json.dumps({"next_id": 2, "tasks": [record]}))
+        self.assert_error(OSError,
+                          "The save file 'tasks.json' contains an invalid task: " + DUE_DATE_ERROR,
+                          self.backend.load_tasks)
+
     def test_save_file_with_duplicate_ids_raises_os_error(self):
-        task = {"id": 1, "title": "A", "description": "", "due_date": "",
-                "priority": "low", "status": "pending"}
+        task = self.saved_task()
         self.write_save_file(json.dumps({"next_id": 2, "tasks": [task, task]}))
         self.assert_error(OSError, "The save file 'tasks.json' contains duplicate task ids",
                           self.backend.load_tasks)

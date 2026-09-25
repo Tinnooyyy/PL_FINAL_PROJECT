@@ -25,6 +25,8 @@
   color: var(--text);
   background: var(--bg);
   line-height: 1.45;
+  /* Lets built-in controls (like the date-time picker icon) match the theme. */
+  color-scheme: light dark;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -218,11 +220,20 @@ code {
   min-width: 0;
 }
 
-.field > span {
+.field > span,
+.field > label {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--muted);
 }
+
+.field__inline {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.field__inline input { flex: 1; min-width: 0; }
 
 .field small { color: var(--muted); }
 
@@ -375,3 +386,4 @@ code {
 .tag[data-status] { color: var(--muted); }
 .tag[data-status="completed"] { color: var(--success); }
 .tag[data-status="in_progress"] { color: var(--accent); }
+.tag[data-category] { color: var(--text); border-style: dashed; }

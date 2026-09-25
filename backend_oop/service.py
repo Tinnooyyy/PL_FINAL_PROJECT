@@ -9,6 +9,7 @@ method and convert the Task objects that come back into plain dictionaries.
 """
 
 from .constants import (
+    CATEGORIES,
     DEFAULT_PRIORITY,
     DEFAULT_STATUS,
     PRIORITIES,
@@ -38,10 +39,11 @@ def configure(data_file):
 
 
 def get_options():
-    """Return the allowed priorities, statuses and sort fields, and the defaults."""
+    """Return the allowed priorities, statuses, categories and sort fields, and the defaults."""
     return {
         "priorities": list(PRIORITIES),
         "statuses": list(STATUSES),
+        "categories": list(CATEGORIES),
         "sort_fields": list(SORT_FIELDS),
         "defaults": {"priority": DEFAULT_PRIORITY, "status": DEFAULT_STATUS},
     }
@@ -82,9 +84,9 @@ def search_tasks(keyword):
     return _to_dicts(_manager.search_tasks(keyword))
 
 
-def filter_tasks(status=None, priority=None):
-    """Return tasks with the given status and/or priority."""
-    return _to_dicts(_manager.filter_tasks(status, priority))
+def filter_tasks(status=None, priority=None, category=None):
+    """Return tasks with the given status, priority and/or category."""
+    return _to_dicts(_manager.filter_tasks(status, priority, category))
 
 
 def sort_tasks(sort_by, descending=False):
@@ -92,10 +94,10 @@ def sort_tasks(sort_by, descending=False):
     return _to_dicts(_manager.sort_tasks(sort_by, descending))
 
 
-def query_tasks(keyword=None, status=None, priority=None, sort_by=None,
-                descending=False):
+def query_tasks(keyword=None, status=None, priority=None, category=None,
+                sort_by=None, descending=False):
     """Search, filter and sort in one call."""
-    return _to_dicts(_manager.query_tasks(keyword, status, priority,
+    return _to_dicts(_manager.query_tasks(keyword, status, priority, category,
                                           sort_by, descending))
 
 
