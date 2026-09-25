@@ -30,6 +30,7 @@ from backend import service  # noqa: E402
 SYSTEM_NAME = "Imperative System"
 PORT = 5002
 FRONTEND_PORT = 5174
+COMPARE_APP_PORT = 5175  # system_compare: the app that shows both systems
 DATA_FILE = os.path.join(SYSTEM_DIR, "data", "tasks.json")
 
 app = Flask(__name__)
@@ -37,9 +38,12 @@ app = Flask(__name__)
 # Keep the key order the backend uses (id, title, ...) instead of sorting A-Z.
 app.json.sort_keys = False
 
-# Only this system's own front end may call this server from a browser.
+# Only this system's own front end and the comparison app may call this
+# server from a browser.
 CORS(app, origins=[f"http://localhost:{FRONTEND_PORT}",
-                   f"http://127.0.0.1:{FRONTEND_PORT}"])
+                   f"http://127.0.0.1:{FRONTEND_PORT}",
+                   f"http://localhost:{COMPARE_APP_PORT}",
+                   f"http://127.0.0.1:{COMPARE_APP_PORT}"])
 
 
 # ----- Helpers ---------------------------------------------------------------
