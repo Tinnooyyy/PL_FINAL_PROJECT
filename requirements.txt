@@ -1,0 +1,4 @@
+# Only the API layer needs these. The two backends and the tests use the
+# Python standard library only.
+flask>=3.0
+flask-cors>=4.0
