@@ -69,8 +69,10 @@ CONTRACT = {
     # Returns {"loaded": <number of tasks loaded>}
     "configure": "(data_file)",
 
-    # The allowed values, so the front end does not have to hard-code them.
-    # Returns {"priorities": [...], "statuses": [...], "sort_fields": [...]}
+    # The allowed values and defaults, so the front end does not have to
+    # hard-code them. Returns
+    # {"priorities": [...], "statuses": [...], "sort_fields": [...],
+    #  "defaults": {"priority": "medium", "status": "pending"}}
     "get_options": "()",
 
     # Create a task. task_data is a dict with any of the task fields except id.

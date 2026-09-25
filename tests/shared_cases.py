@@ -378,6 +378,7 @@ class SharedBackendTests:
             "priorities": ["low", "medium", "high"],
             "statuses": ["pending", "in_progress", "completed"],
             "sort_fields": ["due_date", "priority"],
+            "defaults": {"priority": "medium", "status": "pending"},
         })
 
     # ----- Saving and loading --------------------------------------------------

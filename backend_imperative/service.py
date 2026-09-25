@@ -12,7 +12,13 @@ saves it, then returns a copy of the result.
 import os
 
 from . import query_ops, storage, task_ops, validation
-from .constants import PRIORITIES, SORT_FIELDS, STATUSES
+from .constants import (
+    DEFAULT_PRIORITY,
+    DEFAULT_STATUS,
+    PRIORITIES,
+    SORT_FIELDS,
+    STATUSES,
+)
 
 # The whole state of this backend: a list of task dictionaries, the next free
 # id, and the path of the save file.
@@ -44,11 +50,12 @@ def configure(data_file):
 
 
 def get_options():
-    """Return the allowed priorities, statuses and sort fields."""
+    """Return the allowed priorities, statuses and sort fields, and the defaults."""
     return {
         "priorities": list(PRIORITIES),
         "statuses": list(STATUSES),
         "sort_fields": list(SORT_FIELDS),
+        "defaults": {"priority": DEFAULT_PRIORITY, "status": DEFAULT_STATUS},
     }
 
 

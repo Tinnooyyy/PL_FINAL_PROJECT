@@ -8,7 +8,13 @@ These functions are a thin layer over one TaskManager object: they call a
 method and convert the Task objects that come back into plain dictionaries.
 """
 
-from .constants import PRIORITIES, SORT_FIELDS, STATUSES
+from .constants import (
+    DEFAULT_PRIORITY,
+    DEFAULT_STATUS,
+    PRIORITIES,
+    SORT_FIELDS,
+    STATUSES,
+)
 from .storage import JsonTaskStorage
 from .task_manager import TaskManager
 
@@ -32,11 +38,12 @@ def configure(data_file):
 
 
 def get_options():
-    """Return the allowed priorities, statuses and sort fields."""
+    """Return the allowed priorities, statuses and sort fields, and the defaults."""
     return {
         "priorities": list(PRIORITIES),
         "statuses": list(STATUSES),
         "sort_fields": list(SORT_FIELDS),
+        "defaults": {"priority": DEFAULT_PRIORITY, "status": DEFAULT_STATUS},
     }
 
 
