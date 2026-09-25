@@ -1,9 +1,4 @@
-// Display helpers only: they change how values look, never what they mean.
-
-export const BACKEND_LABELS = {
-  oop: "Object-Oriented",
-  imperative: "Imperative",
-};
+// Display helper only: it changes how values look, never what they mean.
 
 // "in_progress" -> "In progress", "due_date" -> "Due date"
 export function formatLabel(value) {

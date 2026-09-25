@@ -11,7 +11,8 @@ import os
 import tokenize
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BACKENDS = ["backend_oop", "backend_imperative"]
+BACKENDS = [os.path.join("system_oop", "backend"),
+            os.path.join("system_imperative", "backend")]
 
 
 def docstring_lines(source):

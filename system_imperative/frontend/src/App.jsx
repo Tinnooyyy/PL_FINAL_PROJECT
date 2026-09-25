@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import * as api from "./api.js";
-import { BACKEND_LABELS } from "./labels.js";
-import BackendToggle from "./components/BackendToggle.jsx";
 import MessageBanner from "./components/MessageBanner.jsx";
 import TaskForm from "./components/TaskForm.jsx";
 import TaskList from "./components/TaskList.jsx";
@@ -19,25 +17,22 @@ const EMPTY_QUERY = {
 };
 
 export default function App() {
-  const [backend, setBackend] = useState("oop");
   const [options, setOptions] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [query, setQuery] = useState(EMPTY_QUERY);
   const [editingTask, setEditingTask] = useState(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [servedBy, setServedBy] = useState("");
   // Bumped after every change so the task list is fetched again.
   const [refreshCount, setRefreshCount] = useState(0);
 
-  // Every API call goes through here, so errors and the "served by" label
-  // are handled the same way everywhere. Returns the data, or undefined on error.
+  // Every server call goes through here, so errors are handled the same way
+  // everywhere. Returns the data, or undefined if the call failed.
   const run = useCallback(async (apiCall) => {
     try {
-      const result = await apiCall();
-      setServedBy(result.servedBy);
+      const data = await apiCall();
       setError("");
-      return result.data;
+      return data;
     } catch (err) {
       setError(err.message);
       setNotice("");
@@ -45,44 +40,38 @@ export default function App() {
     }
   }, []);
 
-  // Load the allowed values whenever the backend changes.
+  // Load the allowed values, and again after every refresh, so the banner's
+  // "Retry" button also works when the server was started after the page.
   useEffect(() => {
     let ignore = false;
-    run(() => api.getOptions(backend)).then((data) => {
+    run(() => api.getOptions()).then((data) => {
       if (!ignore && data !== undefined) setOptions(data);
     });
     return () => {
       ignore = true;
     };
-  }, [backend, run]);
+  }, [refreshCount, run]);
 
-  // Load the task list whenever the backend, the query or the data changes.
+  // Load the task list whenever the query or the data changes.
   useEffect(() => {
     let ignore = false; // skip answers to requests that are already out of date
-    run(() => api.queryTasks(backend, query)).then((data) => {
+    run(() => api.queryTasks(query)).then((data) => {
       if (!ignore && data !== undefined) setTasks(data);
     });
     return () => {
       ignore = true;
     };
-  }, [backend, query, refreshCount, run]);
+  }, [query, refreshCount, run]);
 
   function refresh() {
     setRefreshCount((count) => count + 1);
   }
 
-  function switchBackend(name) {
-    setBackend(name);
-    setEditingTask(null);
-    setError("");
-    setNotice("");
-  }
-
   // Returns true when the backend accepted the task, so the form can clear itself.
   async function handleSubmit(fields) {
     const data = editingTask
-      ? await run(() => api.updateTask(backend, editingTask.id, fields))
-      : await run(() => api.addTask(backend, fields));
+      ? await run(() => api.updateTask(editingTask.id, fields))
+      : await run(() => api.addTask(fields));
     if (data === undefined) return false;
 
     setNotice(editingTask ? `Task #${data.id} updated.` : `Task #${data.id} added.`);
@@ -92,7 +81,7 @@ export default function App() {
   }
 
   async function handleComplete(task) {
-    const data = await run(() => api.completeTask(backend, task.id));
+    const data = await run(() => api.completeTask(task.id));
     if (data === undefined) return;
     setNotice(`Task #${data.id} marked as completed.`);
     refresh();
@@ -100,7 +89,7 @@ export default function App() {
 
   async function handleDelete(task) {
     if (!window.confirm(`Delete "${task.title}"?`)) return;
-    const data = await run(() => api.deleteTask(backend, task.id));
+    const data = await run(() => api.deleteTask(task.id));
     if (data === undefined) return;
     if (editingTask?.id === data.id) setEditingTask(null);
     setNotice(`Task #${data.id} deleted.`);
@@ -108,41 +97,42 @@ export default function App() {
   }
 
   async function handleSave() {
-    const data = await run(() => api.saveTasks(backend));
+    const data = await run(() => api.saveTasks());
     if (data === undefined) return;
-    setNotice(`Saved ${data.saved} task(s) to the ${BACKEND_LABELS[backend]} save file.`);
+    setNotice(`Saved ${data.saved} task(s) to the save file.`);
   }
 
   async function handleLoad() {
-    const data = await run(() => api.loadTasks(backend));
+    const data = await run(() => api.loadTasks());
     if (data === undefined) return;
     setEditingTask(null);
-    setNotice(`Loaded ${data.loaded} task(s) from the ${BACKEND_LABELS[backend]} save file.`);
+    setNotice(`Loaded ${data.loaded} task(s) from the save file.`);
     refresh();
   }
 
   return (
-    <div className="app" data-backend={backend}>
+    <div className="app">
       <header className="app-header">
         <div className="app-header__inner">
           <div>
             <h1>Task &amp; To-Do Manager</h1>
-            <p className="app-header__subtitle">
-              One React front end, two interchangeable Python backends
-            </p>
+            <p className="app-header__subtitle">Python backend · React front end</p>
           </div>
-          <BackendToggle backend={backend} servedBy={servedBy} onChange={switchBackend} />
+          <div className="system">
+            <span className="system__name">{api.SYSTEM_NAME}</span>
+            <span className="system__server">Server: <code>{api.SERVER_URL}</code></span>
+          </div>
         </div>
       </header>
 
       <main className="layout">
-        <MessageBanner error={error} notice={notice} backend={backend}
+        <MessageBanner error={error} notice={notice} onRetry={refresh}
           onDismiss={() => { setError(""); setNotice(""); }} />
 
         <section className="panel layout__form" aria-label="Task form">
           <TaskForm
-            // A new key gives a fresh form when switching task, backend or options.
-            key={`${backend}-${editingTask?.id ?? "new"}-${options ? "ready" : "waiting"}`}
+            // A new key gives a fresh form when switching task or when options arrive.
+            key={`${editingTask?.id ?? "new"}-${options ? "ready" : "waiting"}`}
             task={editingTask}
             options={options}
             onSubmit={handleSubmit}

@@ -5,7 +5,7 @@ SharedBackendTests is a "mixin": it is not a TestCase by itself, so unittest
 does not run it directly. test_oop.py and test_imperative.py each combine it
 with unittest.TestCase and set `backend` to their backend's service module.
 
-The tests call the backends directly (not through the API).
+The tests call the backends directly (not through the servers).
 """
 
 import json

@@ -4,8 +4,8 @@ import unittest
 
 from shared_cases import SharedBackendTests  # also puts the project root on sys.path
 
-import backend_imperative.service as imperative_service
-from backend_imperative.query_ops import merge_sort
+import system_imperative.backend.service as imperative_service
+from system_imperative.backend.query_ops import merge_sort
 
 
 class TestImperativeBackend(SharedBackendTests, unittest.TestCase):

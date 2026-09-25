@@ -2,12 +2,13 @@
 The shared backend contract.
 
 This file is the ONE place where the public interface of both backends is
-defined. `backend_oop/service.py` and `backend_imperative/service.py` must
-each expose every function listed in CONTRACT, with exactly the parameter
-list shown. `tests/test_contract.py` checks this automatically.
+defined. `system_oop/backend/service.py` and
+`system_imperative/backend/service.py` must each expose every function listed
+in CONTRACT, with exactly the parameter list shown.
+`tests/test_contract.py` checks this automatically.
 
-Nothing here is executed by the backends; it is a specification that the
-tests and the documentation refer to.
+Neither system imports this file; it is a specification that only the tests
+and the documentation refer to.
 
 
 TASK FORMAT
@@ -58,7 +59,7 @@ BUSINESS RULES (enforced identically by both backends)
 ERRORS
 ------
 Both backends signal errors by raising exceptions that are (or inherit from)
-these three built-in types. The API maps them to HTTP status codes.
+these three built-in types. Each system's server maps them to HTTP status codes.
 
     ValueError  -> invalid input                         (HTTP 400)
     KeyError    -> task id not found                     (HTTP 404)

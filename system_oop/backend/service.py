@@ -2,7 +2,7 @@
 Public interface of the object-oriented backend.
 
 Every function here is listed in contract/backend_contract.py and has the same
-name, parameters and return format as in backend_imperative/service.py.
+name, parameters and return format as in system_imperative/backend/service.py.
 
 These functions are a thin layer over one TaskManager object: they call a
 method and convert the Task objects that come back into plain dictionaries.

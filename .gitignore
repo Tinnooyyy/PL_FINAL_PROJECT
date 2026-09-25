@@ -12,6 +12,7 @@ venv/
 .env
 .DS_Store
 
-# Runtime save files: ignore everything in data/ except the placeholder
-data/*
-!data/.gitkeep
+# Runtime save files: ignore everything in each system's data/ folder
+# except the placeholder that keeps the folder in git
+system_*/data/*
+!system_*/data/.gitkeep

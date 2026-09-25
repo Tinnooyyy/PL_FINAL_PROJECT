@@ -12,10 +12,8 @@
   --success: #1e7b4a;
   --success-bg: #e6f4ec;
 
-  --oop: #4f46e5;
-  --oop-soft: #eceafd;
-  --imperative: #c2610c;
-  --imperative-soft: #fcefe2;
+  --accent: #4f46e5;
+  --accent-soft: #eceafd;
 
   --low: #3a7d5c;
   --medium: #8a6d1d;
@@ -42,20 +40,14 @@
     --success: #7fd6a4;
     --success-bg: #1a3326;
 
-    --oop: #8b85ff;
-    --oop-soft: #26244a;
-    --imperative: #f0a35a;
-    --imperative-soft: #3b2a19;
+    --accent: #8b85ff;
+    --accent-soft: #26244a;
 
     --low: #7fd6a4;
     --medium: #e5c26b;
     --high: #ff8a7d;
   }
 }
-
-/* The accent colour follows the active backend, so the demo shows it at a glance. */
-.app[data-backend="oop"] { --accent: var(--oop); --accent-soft: var(--oop-soft); }
-.app[data-backend="imperative"] { --accent: var(--imperative); --accent-soft: var(--imperative-soft); }
 
 /* ----- Base ------------------------------------------------------------- */
 
@@ -75,7 +67,7 @@ code {
   font-size: 0.9em;
 }
 
-/* ----- Header and backend switch ------------------------------------------ */
+/* ----- Header ----------------------------------------------------------- */
 
 .app-header {
   background: var(--panel);
@@ -101,51 +93,26 @@ code {
   color: var(--muted);
 }
 
-.backend {
+/* The system name badge on the right of the header. */
+.system {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
 }
 
-.backend__switch {
-  display: inline-flex;
-  padding: 4px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--bg);
-}
-
-.backend__option {
-  border: 0;
-  background: transparent;
+.system__name {
   padding: 8px 18px;
   border-radius: 999px;
-  font-weight: 600;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.backend__option[aria-pressed="true"][data-name="oop"] { background: var(--oop); color: #fff; }
-.backend__option[aria-pressed="true"][data-name="imperative"] { background: var(--imperative); color: #fff; }
-
-.backend__status {
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  color: var(--muted);
-  font-size: 0.92rem;
-}
-
-.backend__status strong { color: var(--accent); }
-
-.backend__dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
   background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.system__server {
+  color: var(--muted);
+  font-size: 0.88rem;
 }
 
 /* ----- Layout ----------------------------------------------------------- */
@@ -173,7 +140,7 @@ code {
     grid-template-areas: "banner" "form" "list";
   }
   .layout__form { position: static; }
-  .backend { align-items: flex-start; }
+  .system { align-items: flex-start; }
 }
 
 .panel {
@@ -196,6 +163,15 @@ code {
 }
 
 .banner p { margin: 0; }
+
+.banner__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.banner__actions .button { color: var(--text); }
 .banner--error { background: var(--danger-bg); color: var(--danger); border-color: currentColor; }
 .banner--notice { background: var(--success-bg); color: var(--success); border-color: currentColor; }
 
@@ -252,8 +228,7 @@ code {
 .field input:focus,
 .field select:focus,
 .field textarea:focus,
-.button:focus-visible,
-.backend__option:focus-visible {
+.button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }

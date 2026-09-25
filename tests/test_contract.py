@@ -5,8 +5,8 @@ import unittest
 
 from shared_cases import PROJECT_ROOT  # noqa: F401  (puts the project root on sys.path)
 
-import backend_imperative.service as imperative_service
-import backend_oop.service as oop_service
+import system_imperative.backend.service as imperative_service
+import system_oop.backend.service as oop_service
 from contract.backend_contract import CONTRACT
 
 BACKENDS = {"oop": oop_service, "imperative": imperative_service}

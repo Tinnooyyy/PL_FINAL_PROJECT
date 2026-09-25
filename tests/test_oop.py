@@ -5,13 +5,13 @@ from datetime import datetime
 
 from shared_cases import SharedBackendTests  # also puts the project root on sys.path
 
-import backend_oop.service as oop_service
-from backend_oop.exceptions import (
+import system_oop.backend.service as oop_service
+from system_oop.backend.exceptions import (
     TaskNotFoundError,
     TaskStorageError,
     TaskValidationError,
 )
-from backend_oop.task import Task, UrgentTask, create_task
+from system_oop.backend.task import Task, UrgentTask, create_task
 
 
 class TestOOPBackend(SharedBackendTests, unittest.TestCase):

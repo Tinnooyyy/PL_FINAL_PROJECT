@@ -2,7 +2,7 @@
 Public interface of the imperative backend.
 
 Every function here is listed in contract/backend_contract.py and has the same
-name, parameters and return format as in backend_oop/service.py.
+name, parameters and return format as in system_oop/backend/service.py.
 
 All of this backend's data lives in the `store` dictionary below. Each public
 function passes the store to a procedure that changes it step by step, then
